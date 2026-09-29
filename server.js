@@ -38,8 +38,201 @@ let db = null; try { db = new DatabaseSync(DB_PATH); db.exec(`CREATE TABLE IF NO
 const persist = () => { if (db) try { db.prepare(`INSERT INTO kv(k,v) VALUES('s',?) ON CONFLICT(k) DO UPDATE SET v=excluded.v`).run(JSON.stringify({ seq, jobs, apps })); } catch {} };
 (() => { if (db) try { const r = db.prepare(`SELECT v FROM kv WHERE k='s'`).get(); if (r?.v) { const s = JSON.parse(r.v); seq = s.seq; jobs = s.jobs; apps = s.apps; } } catch {} })();
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const STYLE = `body{font:15px/1.5 system-ui,sans-serif;margin:0;background:#f6f7f9;color:#1b2430}header{background:#0f3d56;color:#fff;padding:12px 20px;display:flex;gap:18px;align-items:center}header a{color:#c8e2ef;text-decoration:none;font-weight:500}header a.on{color:#fff;text-decoration:underline}main{max-width:900px;margin:22px auto;padding:0 16px}.card{background:#fff;border:1px solid #dde5ea;border-radius:8px;padding:18px;margin-bottom:18px}table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:8px 10px;border-bottom:1px solid #eaeff2}th{font-size:12px;text-transform:uppercase;color:#5b6b7c}label{display:block;margin:10px 0 4px;font-size:13px;color:#41505f}input,select{padding:8px 10px;border:1px solid #c9d2db;border-radius:6px;min-width:230px;font-size:14px}button,.btn{background:#0f3d56;color:#fff;border:0;border-radius:6px;padding:9px 16px;font-size:14px;cursor:pointer;text-decoration:none;display:inline-block}.pill{display:inline-block;padding:2px 9px;border-radius:12px;font-size:12px;background:#e6ecef}.pill.hired{background:#e4f6ea;color:#1c6b39}.pill.offer{background:#fff4e0;color:#8a5a12}.muted{color:#6b7a89;font-size:13px}.err{background:#fdecea;border:1px solid #f5b3ab;color:#8a1c10;padding:9px 12px;border-radius:6px;margin-bottom:12px}`;
-const layout = (a, t, b) => `<!doctype html><html><head><meta charset="utf-8"><title>${esc(t)} · Harbor Hire</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>${STYLE}</style></head><body><header><strong>Harbor Hire</strong>${[["/", "Dashboard"], ["/applications", "Applications"], ["/applications?stage=offer", "Offers"], ["/applications/new", "New application"]].map(([h, l]) => `<a href="${h}" class="${a === h ? "on" : ""}">${l}</a>`).join("")}<span style="margin-left:auto"><a href="/logout">Sign out</a></span></header><main><h1>${esc(t)}</h1>${b}</main></body></html>`;
+const STYLE = `@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+:root {
+  --primary: #0f4c5c;
+  --primary-hover: #118ab2;
+  --primary-light: #e0f2fe;
+  --primary-text: #0f4c5c;
+  --bg: #f8fafc;
+  --card-bg: #ffffff;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+  --success: #065f46;
+  --success-light: #dcfce7;
+  --success-text: #166534;
+  --warning-light: #fef3c7;
+  --warning-text: #92400e;
+}
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+header {
+  background: linear-gradient(135deg, #0f4c5c 0%, #03071e 100%);
+  color: #fff;
+  padding: 14px 20px;
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+}
+header strong {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  background: linear-gradient(to right, #90e0ef, #00b4d8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+header a {
+  color: #90e0ef;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.925rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  transition: all 0.2s;
+}
+header a:hover {
+  color: #fff;
+  background: rgba(255,255,255,0.1);
+}
+header a.on {
+  color: #fff;
+  background: rgba(255,255,255,0.15);
+  font-weight: 600;
+}
+main {
+  max-width: 900px;
+  width: 100%;
+  margin: 22px auto;
+  padding: 0 16px;
+  box-sizing: border-box;
+  flex-grow: 1;
+}
+h1 {
+  font-size: 1.875rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: #0f4c5c;
+}
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 18px;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05),0 2px 4px -2px rgba(0,0,0,0.05);
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+th, td {
+  text-align: left;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+th {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+td {
+  font-size: 14px;
+}
+tr:last-child td {
+  border-bottom: none;
+}
+label {
+  display: block;
+  margin: 12px 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+input, select {
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  min-width: 230px;
+  font-size: 14px;
+  transition: all 0.2s;
+  background-color: #f1f5f9;
+  width: 100%;
+  max-width: 400px;
+  box-sizing: border-box;
+}
+input:focus, select:focus {
+  outline: none;
+  border-color: #0f4c5c;
+  box-shadow: 0 0 0 3px #90e0ef;
+  background-color: #fff;
+}
+button, .btn {
+  background: #0f4c5c;
+  color: #fff;
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  transition: all 0.2s;
+  text-align: center;
+  box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);
+}
+button:hover, .btn:hover {
+  background: #118ab2;
+  transform: translateY(-1px);
+}
+button:active, .btn:active {
+  transform: translateY(0);
+}
+.pill {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #475569;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+.pill.hired {
+  background: var(--success-light);
+  color: var(--success-text);
+}
+.pill.offer {
+  background: var(--warning-light);
+  color: var(--warning-text);
+}
+.muted {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.err {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+footer {
+  margin-top: auto;
+  text-align: center;
+  padding: 24px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-muted);
+  background: #fff;
+}`;
+const layout = (a, t, b) => `<!doctype html><html><head><meta charset="utf-8"><title>${esc(t)} · Harbor Hire</title><meta name="viewport" content="width=device-width,initial-scale=1"><script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script><style>${STYLE}</style></head><body><header><strong>Harbor Hire</strong>${[["/", "Dashboard"], ["/applications", "Applications"], ["/applications?stage=offer", "Offers"], ["/applications/new", "New application"]].map(([h, l]) => `<a href="${h}" class="${a === h ? "on" : ""}">${l}</a>`).join("")}<span style="margin-left:auto"><a href="/logout">Sign out</a></span></header><main><h1>${esc(t)}</h1>${b}</main><footer>&copy; 2026 Harbor Hire. Powered by Alpine.js & custom style bindings.</footer></body></html>`;
 app.get("/healthz", (_q, r) => r.type("text").send("ok"));
 app.use((req, res, next) => { if (["/login", "/healthz", "/api/reset"].includes(req.path)) return next(); if (!currentUser(req)) return res.redirect("/login"); next(); });
 app.get("/login", (_q, res) => res.send(`<!doctype html><html><head><meta charset="utf-8"><title>Sign in · Harbor Hire</title><style>${STYLE}</style></head><body><main><div class="card" style="max-width:380px;margin:60px auto"><h1>Sign in</h1><form method="post" action="/login"><label for="email">Email</label><input id="email" name="email" type="email" value="recruiter@harborhire.test"><label for="password">Password</label><input id="password" name="password" type="password" value="hire12345"><p><button>Sign in</button></p></form></div></main></body></html>`));
